@@ -1,3 +1,8 @@
+import random
+
+import numpy as np
+
+
 class TTT:
     # 執行 action 會獲勝的條件，需要有其中一組組合
     win = {0: ({1, 2}, {3, 6}, {4, 8}),
@@ -71,6 +76,51 @@ class TTT:
                 ans += '\n' + '-' * 6 + '\n'
         ans += '=' * 50
         return ans
+
+
+class OOXXRL(TTT):
+    def __init__(self, bot_chair):
+        if bot_chair != 1 and bot_chair != 2:
+            print(f'error chair: {bot_chair}')
+        else:
+            self.bot_chair = bot_chair
+            super().__init__()
+            self.action_dim = 9
+            self.state_dim = np.array([self.deck]).shape
+
+    def reset(self):
+        TTT.reset(self)
+        if self.cur_player == self.bot_chair:
+            return np.array([self.deck])
+        else:
+            self.step(self.opponent_action())
+            return np.array([self.deck])
+
+    def step(self, action):
+        info = ''
+        if action in self.legal_actions:
+            TTT.step(self, action)
+            if self.done:
+                reward = self.compute_reward()
+            else:
+                TTT.step(self, self.opponent_action())
+                reward = self.compute_reward()
+
+            return np.array([self.deck]), reward, self.done, info
+        else:
+            reward = -100
+            return np.array([self.deck]), reward, True, info
+
+    def compute_reward(self):
+        if self.winner == self.bot_chair:
+            return 1
+        elif self.winner == 0:
+            return 0
+        else:
+            return -1
+
+    def opponent_action(self):
+        return random.sample(self.legal_actions, 1)[0]
 
 
 if __name__ == '__main__':
