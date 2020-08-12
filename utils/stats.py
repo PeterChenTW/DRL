@@ -23,14 +23,14 @@ def plot_reward(file_path):
     sns.set(style="darkgrid")
 
     # Load an example dataset with long-form data
-    fmri = pd.read_csv(file_path)[300:1000]
-    print(fmri.head())
+    data = pd.read_csv(file_path)
 
     # Plot the responses for different events and regions
     sns.relplot(x="Episode", y="Mean", kind="line",
-                data=fmri)
-    plt.show()
+                data=data)
+    plt.savefig(f'{file_path}_Mean.png')
+    # plt.show()
 
 
 if __name__ == '__main__':
-    plot_reward('../log/logs_1.csv')
+    plot_reward('../log/logs_1597218746.956845.csv')

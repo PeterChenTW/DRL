@@ -89,13 +89,9 @@ class OOXXRL(TTT):
             self.action_dim = 9
             self.bot_chair = bot_chair
             self.state_dim = (1, 9)
-            self.load_model()
             super().__init__()
 
     def reset(self):
-        self.reset_count += 1
-        if not self.reset_count % 1000:
-            self.load_model()
         TTT.reset(self)
         if self.cur_player == self.bot_chair:
             return np.array([self.deck])
@@ -110,16 +106,12 @@ class OOXXRL(TTT):
             if self.done:
                 reward = self.compute_reward()
             else:
-                opponent = self.ddqn_action()
-                if opponent in self.legal_actions:
-                    TTT.step(self, opponent)
-                else:
-                    TTT.step(self, self.opponent_action())
+                TTT.step(self, self.opponent_action())
                 reward = self.compute_reward()
 
             return np.array([self.deck]), reward, self.done, info
         else:
-            reward = -100
+            reward = -1
             return np.array([self.deck]), reward, True, info
 
     def compute_reward(self):

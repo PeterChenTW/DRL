@@ -30,6 +30,7 @@ class DDQN:
         self.gamma = 0.95
         self.epsilon = 0.8
         self.epsilon_decay = 0.99
+        self.min_epsilon = 0.05
         self.buffer_size = 20000
         #
         if len(state_dim) < 3:
@@ -73,10 +74,11 @@ class DDQN:
         # Train on batch
         self.agent.fit(s, q)
         # Decay epsilon
-        self.epsilon *= self.epsilon_decay
+        if self.epsilon > self.min_epsilon:
+            self.epsilon *= self.epsilon_decay
 
     def train(self, env):
-        nb_episodes = 50000
+        nb_episodes = 20000
         batch_size = 128
         is_gather_stats = True
         """ Main DDQN Training Algorithm

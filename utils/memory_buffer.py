@@ -14,7 +14,7 @@ class MemoryBuffer(object):
     def __init__(self, buffer_size, with_per=False):
         """ Initialization
         """
-        if (with_per):
+        if with_per:
             # Prioritized Experience Replay
             self.alpha = 0.5
             self.epsilon = 0.01
@@ -64,8 +64,9 @@ class MemoryBuffer(object):
             T = self.buffer.total() // batch_size
             for i in range(batch_size):
                 a, b = T * i, T * (i + 1)
-                s = random.uniform(a, b)
+                s = random.uniform(a, b) + 1e-8
                 idx, error, data = self.buffer.get(s)
+
                 batch.append((*data, idx))
             idx = np.array([i[5] for i in batch])
         # Sample randomly from Buffer
