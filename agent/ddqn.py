@@ -41,13 +41,13 @@ class DDQN:
         # Memory Buffer for Experience Replay
         self.buffer = MemoryBuffer(self.buffer_size, self.with_per)
 
-    def policy_action(self, s):
+    def policy_action(self, s, is_test=False):
         """ Apply an espilon-greedy policy to pick next action
         """
-        if random() <= self.epsilon:
-            return randrange(self.action_dim)
-        else:
+        if random() > self.epsilon or is_test:
             return np.argmax(self.agent.predict(s)[0])
+        else:
+            return randrange(self.action_dim)
 
     def train_agent(self, batch_size):
         """ Train Q-network on batch sampled from the buffer
@@ -76,7 +76,7 @@ class DDQN:
         self.epsilon *= self.epsilon_decay
 
     def train(self, env):
-        nb_episodes = 10000
+        nb_episodes = 50000
         batch_size = 128
         is_gather_stats = True
         """ Main DDQN Training Algorithm

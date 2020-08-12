@@ -2,6 +2,8 @@ import random
 
 import numpy as np
 
+from agent.ddqn import DDQN
+
 
 class TTT:
     # 執行 action 會獲勝的條件，需要有其中一組組合
@@ -83,12 +85,17 @@ class OOXXRL(TTT):
         if bot_chair != 1 and bot_chair != 2:
             print(f'error chair: {bot_chair}')
         else:
-            self.bot_chair = bot_chair
-            super().__init__()
+            self.reset_count = 0
             self.action_dim = 9
-            self.state_dim = np.array([self.deck]).shape
+            self.bot_chair = bot_chair
+            self.state_dim = (1, 9)
+            self.load_model()
+            super().__init__()
 
     def reset(self):
+        self.reset_count += 1
+        if not self.reset_count % 1000:
+            self.load_model()
         TTT.reset(self)
         if self.cur_player == self.bot_chair:
             return np.array([self.deck])
@@ -103,7 +110,11 @@ class OOXXRL(TTT):
             if self.done:
                 reward = self.compute_reward()
             else:
-                TTT.step(self, self.opponent_action())
+                opponent = self.ddqn_action()
+                if opponent in self.legal_actions:
+                    TTT.step(self, opponent)
+                else:
+                    TTT.step(self, self.opponent_action())
                 reward = self.compute_reward()
 
             return np.array([self.deck]), reward, self.done, info
@@ -121,6 +132,13 @@ class OOXXRL(TTT):
 
     def opponent_action(self):
         return random.sample(self.legal_actions, 1)[0]
+
+    def ddqn_action(self):
+        return self.bot.policy_action(np.array([self.deck]), is_test=True)
+
+    def load_model(self):
+        self.bot = DDQN(self.action_dim, self.state_dim)
+        self.bot.load_weights('models/test_LR_0.00025_PER_dueling_for_o.h5')
 
 
 if __name__ == '__main__':
