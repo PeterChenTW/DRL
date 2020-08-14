@@ -162,17 +162,16 @@ class Agent:
     def network(self, dueling):
         """ Build Deep Q-Network
         """
-        inp = Input((self.state_dim))
-
         # Determine whether we are dealing with an image input (Atari) or not
         if len(self.state_dim) > 2:
-            inp = Input((self.state_dim[1:]))
-            x = Conv2D(32, (5, 5), activation='relu', padding='same', kernel_initializer='he_normal')(inp)
-            x = Conv2D(64, (4, 4), activation='relu', padding='same', kernel_initializer='he_normal')(x)
-            x = Conv2D(64, (3, 3), activation='relu', padding='same', kernel_initializer='he_normal')(x)
+            inp = Input((self.state_dim))
+            x = Conv2D(8, (3, 3), activation='tanh', padding='same', kernel_initializer='he_normal')(inp)
+            x = Conv2D(16, (3, 3), activation='tanh', padding='same', kernel_initializer='he_normal')(x)
+            x = Conv2D(32, (3, 3), activation='tanh', padding='same', kernel_initializer='he_normal')(x)
             x = Flatten()(x)
-            x = Dense(512, activation='relu')(x)
+            x = Dense(512, activation='tanh')(x)
         else:
+            inp = Input((self.state_dim))
             x = Flatten()(inp)
             x = Dense(64, activation='relu')(x)
             x = Dense(64, activation='relu')(x)

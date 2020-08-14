@@ -138,18 +138,19 @@ class GobangRL(Gobang):
         if bot_chair != 1 and bot_chair != 2:
             print(f'error chair: {bot_chair}')
         else:
-            self.action_dim = 5 * 5
+            self.rl_len = 10
+            self.action_dim = self.rl_len * self.rl_len
             self.bot_chair = bot_chair
-            self.state_dim = (5, 5)
-            super().__init__(5)
+            self.state_dim = (1, self.rl_len, self.rl_len)
+            super().__init__(self.rl_len)
 
     def reset(self):
         Gobang.reset(self)
         if self.cur_player == self.bot_chair:
-            return self.deck
+            return self.deck.reshape((1, self.rl_len, self.rl_len))
         else:
             self.step(self.opponent_action())
-            return self.deck
+            return self.deck.reshape((1, self.rl_len, self.rl_len))
 
     def step(self, ori_action):
         info = ''
@@ -166,7 +167,7 @@ class GobangRL(Gobang):
         else:
             reward = -1
             self.done = True
-        return self.deck, reward, self.done, info
+        return self.deck.reshape((1, self.rl_len, self.rl_len)), reward, self.done, info
 
     def compute_reward(self):
         if self.winner == self.bot_chair:
