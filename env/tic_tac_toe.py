@@ -64,6 +64,7 @@ class TTT:
     def __str__(self):
         ans = '=' * 50 + '\n'
         ans += f'cur player: {self.cur_player}, end game: {self.done}, winner: {self.winner}\n'
+        ans += f'legal action: {self.legal_actions}\n'
         ans += '=' * 50 + '\n'
         count = 0
         for i in self.deck:
@@ -118,6 +119,8 @@ class OOXXRL(TTT):
         if self.winner == self.bot_chair:
             return 1
         elif self.winner == 0:
+            if self.done:
+                return 0.5
             return 0
         else:
             return -1

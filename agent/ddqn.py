@@ -30,7 +30,7 @@ class DDQN:
         self.gamma = 0.95
         self.epsilon = 0.8
         self.epsilon_decay = 0.99
-        self.min_epsilon = 0.05
+        self.min_epsilon = 0.2
         self.buffer_size = 20000
         #
         if len(state_dim) < 3:
@@ -78,7 +78,7 @@ class DDQN:
             self.epsilon *= self.epsilon_decay
 
     def train(self, env):
-        nb_episodes = 20000
+        nb_episodes = 15000 * (48 + 12 + 2)
         batch_size = 128
         is_gather_stats = True
         """ Main DDQN Training Algorithm
@@ -107,7 +107,6 @@ class DDQN:
                 if self.buffer.size() > batch_size:
                     self.train_agent(batch_size)
                     self.agent.transfer_weights()
-
             # Gather stats every episode for plotting
             if is_gather_stats:
                 mean, stdev = gather_stats(self, env)
@@ -168,11 +167,11 @@ class Agent:
         # Determine whether we are dealing with an image input (Atari) or not
         if len(self.state_dim) > 2:
             inp = Input((self.state_dim[1:]))
-            x = Conv2D(32, 8, activation='relu', padding='same', kernel_initializer='he_normal')(inp)
-            x = Conv2D(64, 4, activation='relu', padding='same', kernel_initializer='he_normal')(x)
-            x = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(x)
+            x = Conv2D(32, (5, 5), activation='relu', padding='same', kernel_initializer='he_normal')(inp)
+            x = Conv2D(64, (4, 4), activation='relu', padding='same', kernel_initializer='he_normal')(x)
+            x = Conv2D(64, (3, 3), activation='relu', padding='same', kernel_initializer='he_normal')(x)
             x = Flatten()(x)
-            x = Dense(256, activation='relu')(x)
+            x = Dense(512, activation='relu')(x)
         else:
             x = Flatten()(inp)
             x = Dense(64, activation='relu')(x)
@@ -199,7 +198,8 @@ class Agent:
     def fit(self, inp, targ):
         """ Perform one epoch of training
         """
-        self.model.fit(self.reshape(inp), targ, epochs=1, verbose=0)
+        history = self.model.fit(self.reshape(inp), targ, epochs=1, verbose=0)
+        # print(history.history['loss'])
 
     def predict(self, inp):
         """ Q-Value Prediction

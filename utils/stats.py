@@ -33,4 +33,4 @@ def plot_reward(file_path):
 
 
 if __name__ == '__main__':
-    plot_reward('../log/logs_1597218746.956845.csv')
+    plot_reward('../log/logs_1597282825.630291.csv')
