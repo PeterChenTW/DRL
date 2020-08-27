@@ -1,5 +1,5 @@
 import random
-from random import random, randrange
+from random import random, randrange, sample
 
 import keras.backend as K
 import numpy as np
@@ -30,7 +30,7 @@ class DDQN:
         self.gamma = 0.95
         self.epsilon = 0.8
         self.epsilon_decay = 0.99
-        self.min_epsilon = 0.2
+        self.min_epsilon = 0.01
         self.buffer_size = 20000
         #
         if len(state_dim) < 3:
@@ -42,13 +42,20 @@ class DDQN:
         # Memory Buffer for Experience Replay
         self.buffer = MemoryBuffer(self.buffer_size, self.with_per)
 
-    def policy_action(self, s, is_test=False):
+    def policy_action(self, s, is_test=False, legal_action=None):
         """ Apply an espilon-greedy policy to pick next action
         """
+
         if random() > self.epsilon or is_test:
-            return np.argmax(self.agent.predict(s)[0])
+            tmp = [int(i[0] * 10 + i[1]) for i in legal_action]
+            get_index = np.argmax(self.agent.predict(s)[0][tmp])
+            return tmp[get_index]
         else:
-            return randrange(self.action_dim)
+            if legal_action is None:
+                return randrange(self.action_dim)
+            else:
+                tmp = sample(legal_action, 1)[0]
+                return int(tmp[0] * 10 + tmp[1])
 
     def train_agent(self, batch_size):
         """ Train Q-network on batch sampled from the buffer
@@ -78,7 +85,7 @@ class DDQN:
             self.epsilon *= self.epsilon_decay
 
     def train(self, env):
-        nb_episodes = 15000 * (48 + 12 + 2)
+        nb_episodes = 10000 * 24
         batch_size = 128
         is_gather_stats = True
         """ Main DDQN Training Algorithm
@@ -94,7 +101,7 @@ class DDQN:
 
             while not done:
                 # Actor picks an action (following the policy)
-                a = self.policy_action(old_state)
+                a = self.policy_action(old_state, False, env.legal_actions)
                 # Retrieve new state, reward, and whether the state is terminal
                 new_state, r, done, _ = env.step(a)
                 # Memorize for experience replay
@@ -165,9 +172,11 @@ class Agent:
         # Determine whether we are dealing with an image input (Atari) or not
         if len(self.state_dim) > 2:
             inp = Input((self.state_dim))
-            x = Conv2D(8, (3, 3), activation='tanh', padding='same', kernel_initializer='he_normal')(inp)
-            x = Conv2D(16, (3, 3), activation='tanh', padding='same', kernel_initializer='he_normal')(x)
-            x = Conv2D(32, (3, 3), activation='tanh', padding='same', kernel_initializer='he_normal')(x)
+            x = Conv2D(4, 3, activation='relu', padding='same', kernel_initializer='he_normal')(inp)
+            x = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(x)
+            x = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(x)
+            x = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(x)
+            x = Conv2D(4, 3, activation='relu', padding='same', kernel_initializer='he_normal')(x)
             x = Flatten()(x)
             x = Dense(512, activation='tanh')(x)
         else:

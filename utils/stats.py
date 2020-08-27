@@ -12,7 +12,7 @@ def gather_stats(agent, env):
         old_state = env.reset()
         cumul_r, done = 0, False
         while not done:
-            a = agent.policy_action(old_state, is_test=True)
+            a = agent.policy_action(old_state, is_test=True, legal_action=env.legal_actions)
             old_state, r, done, _ = env.step(a)
             cumul_r += r
         score.append(cumul_r)
@@ -33,4 +33,4 @@ def plot_reward(file_path):
 
 
 if __name__ == '__main__':
-    plot_reward('../log/logs_1597282825.630291.csv')
+    plot_reward('../log/logs_1598334995.2496798.csv')

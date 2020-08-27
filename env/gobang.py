@@ -1,4 +1,7 @@
+import copy
+import math
 import random
+from collections import defaultdict as ddict
 
 import numpy as np
 
@@ -35,27 +38,32 @@ class Gobang:
             else:
                 self.to_next()
 
+    def is_game_over(self):
+        return self.done
+
     def to_next(self):
         self.cur_player = 1 if self.cur_player == 2 else 2
 
     def finsh(self, winner):
-        if winner:
+        if winner is not None:
             self.winner = self.cur_player
         self.done = True
 
-    def jugde_win(self, action):
+    def jugde_win(self, action, deck=None):
+        if deck is None:
+            deck = self.deck
         # 判斷四個方向 有無五連珠 0度 45度 90度 135度
         x, y = action
         count = 0
         # 向左搜索
         for i in range(x + 1, self.length):
-            if self.deck[i][y] == self.deck[x][y]:
+            if deck[i][y] == deck[x][y]:
                 count += 1
             else:
                 break
         # 向右搜索
         for i in range(x, 0, -1):
-            if self.deck[i][y] == self.deck[x][y]:
+            if deck[i][y] == deck[x][y]:
                 count += 1
             else:
                 break
@@ -64,13 +72,13 @@ class Gobang:
         count = 0
         # 向下搜索
         for i in range(y + 1, self.length):
-            if self.deck[x][i] == self.deck[x][y]:
+            if deck[x][i] == deck[x][y]:
                 count += 1
             else:
                 break
         # 向上搜索
         for i in range(y, 0, -1):
-            if self.deck[x][i] == self.deck[x][y]:
+            if deck[x][i] == deck[x][y]:
                 count += 1
             else:
                 break
@@ -79,13 +87,13 @@ class Gobang:
         count = 0
         # 向右下搜索
         for i, j in zip(range(x + 1, self.length), range(y + 1, self.length)):
-            if self.deck[i][j] == self.deck[x][y]:
+            if deck[i][j] == deck[x][y]:
                 count += 1
             else:
                 break
         # 向左上搜索
         for i, j in zip(range(x, 0, -1), range(y, 0, -1)):
-            if self.deck[i][j] == self.deck[x][y]:
+            if deck[i][j] == deck[x][y]:
                 count += 1
             else:
                 break
@@ -94,13 +102,13 @@ class Gobang:
         count = 0
         # 向左下搜索
         for i, j in zip(range(x - 1, 0, -1), range(y + 1, self.length)):
-            if self.deck[i][j] == self.deck[x][y]:
+            if deck[i][j] == deck[x][y]:
                 count += 1
             else:
                 break
         # 向右上搜索
         for i, j in zip(range(x, self.length), range(y, 0, -1)):
-            if self.deck[i][j] == self.deck[x][y]:
+            if deck[i][j] == deck[x][y]:
                 count += 1
             else:
                 break
@@ -152,39 +160,94 @@ class GobangRL(Gobang):
             self.step(self.opponent_action())
             return self.deck.reshape((1, self.rl_len, self.rl_len))
 
+    def _action_index_to_cord(self, action_index):
+        x = action_index // self.length
+        y = action_index % self.length
+        return x, y
+
     def step(self, ori_action):
         info = ''
-        x = ori_action // self.length
-        y = ori_action % self.length
-        action = (x, y)
-        if action in self.legal_actions:
-            Gobang.step(self, action)
-            if self.done:
-                reward = self.compute_reward()
-            else:
-                Gobang.step(self, self.opponent_action())
-                reward = self.compute_reward()
+        action = self._action_index_to_cord(ori_action)
+
+        # if action in self.legal_actions:
+        Gobang.step(self, action)
+        if Gobang.is_game_over(self):
+            reward = self.compute_reward()
         else:
-            reward = -1
-            self.done = True
-        return self.deck.reshape((1, self.rl_len, self.rl_len)), reward, self.done, info
+            Gobang.step(self, self.opponent_action())
+            reward = self.compute_reward()
+
+        return self.deck.reshape((1, self.rl_len, self.rl_len)), reward, Gobang.is_game_over(self), info
+
+    def sample_step(self, action):
+        Gobang.step(self, action)
 
     def compute_reward(self):
         if self.winner == self.bot_chair:
-            print("win!!!!!!!!")
-            print(self)
+            # print("win!!!!!!!!")
+            # print(self)
             return 1
         elif self.winner == 0:
             if self.done:
                 return 0.5
             return 0
         else:
-            print("lose!!!!!!!!")
-            print(self)
+            # print("lose!!!!!!!!")
+            # print(self)
             return -1
 
     def opponent_action(self):
+        # win to win
+        for a in self.legal_actions:
+            tmp_deck = self.deck.copy()
+            tmp_deck[a[0]][a[1]] = 2
+            if self.jugde_win(a, tmp_deck):
+                return a
+        # defense lose
+        for a in self.legal_actions:
+            tmp_deck = self.deck.copy()
+            tmp_deck[a[0]][a[1]] = 1
+            if self.jugde_win(a, tmp_deck):
+                return a
         return random.sample(self.legal_actions, 1)[0]
+
+    mcts_database = ddict(lambda: [0, 0])
+
+    def mcts_action(self, times=10):
+        # 0: total 1: win
+        all_move_with_history = []
+        for m in self.legal_actions:
+            _room = copy.deepcopy(self)
+            _room.sample_step(m)
+            all_move_with_history.append([m, self.mcts_database[str(_room.deck)]])
+
+        for n in range(times):
+            _room = copy.deepcopy(self)
+            # selection and expansion
+            select_move = max(all_move_with_history,
+                              key=lambda x: self._ucb_score(x[1][1], x[1][0], n + 1))[0]
+            history = [str(_room.deck)]
+            _room.sample_step(select_move)
+            # simulation
+            while not _room.done:
+                if _room.cur_player == self.cur_player:
+                    history.append(str(_room.deck))
+                sample_move = random.sample(_room.legal_actions, 1)[0]
+                _room.sample_step(sample_move)
+            # back propagation
+            for h in history:
+                self.mcts_database[h][0] += 1
+                if _room.winner == self.cur_player:
+                    self.mcts_database[h][1] += 1
+
+        final_move = max(all_move_with_history,
+                         key=lambda x: x[1][1] / (x[1][0] + 1e-10))[0]
+
+        return final_move
+
+    def _ucb_score(self, win, total, n, c=1.414):
+        _total = total + 1e-10
+        return win / _total + math.sqrt(c * math.log(n) / _total)
 
 
 if __name__ == '__main__':
